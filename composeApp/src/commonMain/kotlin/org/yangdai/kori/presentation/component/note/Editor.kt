@@ -1,9 +1,7 @@
 package org.yangdai.kori.presentation.component.note
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
@@ -355,13 +353,21 @@ private fun Modifier.editorDrawing(
     lintPaths: List<Path>,
     scrollState: ScrollState
 ): Modifier {
-    val infiniteTransition = rememberInfiniteTransition("wavy-line")
-    val phase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 2f * PI.toFloat(),
-        animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing)),
-        label = "wave-phase"
-    )
+    val phase = remember { Animatable(0f) }
+    val hasLintErrors = lintPaths.isNotEmpty()
+    LaunchedEffect(hasLintErrors) {
+        if (hasLintErrors) {
+            while (true) {
+                phase.animateTo(
+                    targetValue = 2f * PI.toFloat(),
+                    animationSpec = tween(1000, easing = LinearEasing)
+                )
+                phase.snapTo(0f)
+            }
+        } else {
+            phase.stop()
+        }
+    }
 
     return drawWithCache {
         // 预先计算颜色，避免在绘制循环中重复创建
@@ -382,7 +388,7 @@ private fun Modifier.editorDrawing(
                 }
                 // 绘制波浪线
                 lintPaths.fastForEach {
-                    drawWavyUnderlineOptimized(it, phase)
+                    drawWavyUnderlineOptimized(it, phase.value)
                 }
             }
         }

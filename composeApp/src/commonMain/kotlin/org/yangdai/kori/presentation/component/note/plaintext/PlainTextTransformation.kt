@@ -8,6 +8,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import org.yangdai.kori.presentation.theme.linkColor
 
 class PlainTextTransformation : OutputTransformation {
+    private val linkStyle = SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline)
+
     override fun TextFieldBuffer.transformOutput() {
         listOf(
             TextFormat.AUTOLINK_EMAIL_ADDRESS,
@@ -15,7 +17,7 @@ class PlainTextTransformation : OutputTransformation {
         ).forEach { regex ->
             regex.findAll(this.originalText).forEach { matchResult ->
                 addStyle(
-                    SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline),
+                    linkStyle,
                     matchResult.range.first,
                     matchResult.range.last + 1
                 )

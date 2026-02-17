@@ -185,19 +185,23 @@ fun AdaptiveEditor(
     findAndReplaceState = findAndReplaceState,
     readOnly = readOnly,
     isLineNumberVisible = isLineNumberVisible,
-    lint = if (isLintingEnabled) {
+    lint = remember(noteType, isLintingEnabled) {
+        if (isLintingEnabled) {
+            when (noteType) {
+                NoteType.MARKDOWN -> MarkdownLint()
+                NoteType.TODO -> TodoLint()
+                else -> null
+            }
+        } else null
+    },
+    headerRange = headerRange,
+    outputTransformation = remember(noteType) {
         when (noteType) {
-            NoteType.MARKDOWN -> MarkdownLint()
-            NoteType.TODO -> TodoLint()
+            NoteType.MARKDOWN -> MarkdownTransformation()
+            NoteType.TODO -> TodoTransformation()
+            NoteType.PLAIN_TEXT -> PlainTextTransformation()
             else -> null
         }
-    } else null,
-    headerRange = headerRange,
-    outputTransformation = when (noteType) {
-        NoteType.MARKDOWN -> MarkdownTransformation()
-        NoteType.TODO -> TodoTransformation()
-        NoteType.PLAIN_TEXT -> PlainTextTransformation()
-        else -> null
     },
     onScroll = onScroll
 )

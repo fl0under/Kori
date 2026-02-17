@@ -176,9 +176,11 @@ fun AdaptiveEditor(
     onScroll: (firstVisibleCharPositon: Int) -> Unit
 ) = Editor(
     modifier = modifier,
-    textFieldModifier = when (noteType) {
-        NoteType.MARKDOWN -> Modifier.markdownKeyEvents(textFieldState)
-        else -> Modifier
+    textFieldModifier = remember(noteType) {
+        when (noteType) {
+            NoteType.MARKDOWN -> Modifier.markdownKeyEvents(textFieldState)
+            else -> Modifier
+        }
     },
     textFieldState = textFieldState,
     scrollState = scrollState,

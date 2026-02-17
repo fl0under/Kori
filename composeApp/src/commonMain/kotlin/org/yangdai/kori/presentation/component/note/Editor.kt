@@ -32,10 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -330,19 +328,23 @@ private fun DrawScope.drawWavyUnderlineOptimized(
     val width = bounds.right - bounds.left
     if (width <= 0f) return
 
-    val pointCount = (width / sampleStep).toInt().coerceAtLeast(2)
-    val points = List(pointCount) { i ->
-        val x = bounds.left + i * sampleStep
-        val y = bounds.bottom + 2f + amplitude * sin((x * (2f * PI / wavelength)) + phase).toFloat()
-        Offset(x, y)
+    val baseY = bounds.bottom + 2f
+    val twoPiOverWavelength = (2.0 * PI / wavelength).toFloat()
+    val wavyPath = Path()
+    wavyPath.moveTo(
+        bounds.left,
+        baseY + amplitude * sin((bounds.left * twoPiOverWavelength) + phase)
+    )
+    var x = bounds.left + sampleStep
+    while (x <= bounds.right) {
+        wavyPath.lineTo(x, baseY + amplitude * sin((x * twoPiOverWavelength) + phase))
+        x += sampleStep
     }
 
-    drawPoints(
-        points = points,
-        pointMode = PointMode.Polygon,
+    drawPath(
+        path = wavyPath,
         color = Color.Red,
-        strokeWidth = 1.5f,
-        cap = StrokeCap.Round
+        style = Stroke(width = 1.5f, cap = StrokeCap.Round)
     )
 }
 

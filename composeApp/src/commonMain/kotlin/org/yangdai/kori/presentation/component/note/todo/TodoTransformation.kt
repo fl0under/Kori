@@ -3,6 +3,10 @@ package org.yangdai.kori.presentation.component.note.todo
 import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.runtime.Immutable
+import org.yangdai.kori.data.local.entity.NoteType
+import org.yangdai.kori.presentation.component.note.highlighting.applyHighlightSpans
+import org.yangdai.kori.presentation.component.note.highlighting.createAsyncHighlighter
+import org.yangdai.kori.presentation.component.note.highlighting.normalized
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -11,67 +15,13 @@ import androidx.compose.ui.text.style.TextDecoration
 import kotlinx.collections.immutable.persistentListOf
 
 class TodoTransformation : OutputTransformation {
+    private val highlighter = createAsyncHighlighter(NoteType.TODO)
+
     override fun TextFieldBuffer.transformOutput() {
-        // 按行处理
-        var lineStart = 0
-        originalText.lineSequence().forEach { line ->
-            val lineEnd = lineStart + line.length
-
-            // 1. 完成标记
-            val doneMatch = TodoFormat.doneRegex.find(line)
-            if (doneMatch != null) {
-                // 整行应用doneStyle
-                addStyle(TodoFormat.doneStyle, lineStart, lineEnd)
-            } else {
-                // 2. 优先级
-                val priMatch = TodoFormat.priorityRegex.find(line)
-                if (priMatch != null) {
-                    val priEnd = priMatch.range.last + 1
-                    val idx = priMatch.groupValues[1][0] - 'A'
-                    if (idx in 0..25) {
-                        addStyle(
-                            TodoFormat.priorityStyle.copy(color = TodoFormat.priorityColors[idx]),
-                            lineStart,
-                            lineStart + priEnd
-                        )
-                    }
-                }
-                // 3. 创建日期（行中任意位置）
-                TodoFormat.dateRegex.findAll(line).forEach { dateMatch ->
-                    val dateStart = dateMatch.range.first
-                    addStyle(
-                        TodoFormat.dateStyle,
-                        lineStart + dateStart,
-                        lineStart + dateStart + 10
-                    )
-                }
-            }
-
-            // 4. context
-            TodoFormat.contextRegex.findAll(line).forEach {
-                val start = it.range.first
-                val end = it.range.last + 1
-                addStyle(TodoFormat.contextStyle, lineStart + start, lineStart + end)
-            }
-            // 5. project
-            TodoFormat.projectRegex.findAll(line).forEach {
-                val start = it.range.first
-                val end = it.range.last + 1
-                addStyle(TodoFormat.projectStyle, lineStart + start, lineStart + end)
-            }
-            // 6. 元数据 key:value
-            TodoFormat.metaRegex.findAll(line).forEach {
-                val start = it.range.first
-                val end = it.range.last + 1
-                // 避免 context/project 被重复高亮
-                val value = it.groupValues[1]
-                if (!value.startsWith("@") && !value.startsWith("+")) {
-                    addStyle(TodoFormat.metaStyle, lineStart + start, lineStart + end)
-                }
-            }
-
-            lineStart = lineEnd + 1 // +1 for '\n'
-        }
+        if (originalText.isEmpty()) return
+        val spans = highlighter?.highlight(originalText.toString())?.normalized(originalText.length)
+            ?: return
+        applyHighlightSpans(spans)
     }
 }
 

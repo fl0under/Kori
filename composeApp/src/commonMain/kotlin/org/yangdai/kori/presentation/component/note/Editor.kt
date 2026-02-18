@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.overscroll
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -17,6 +18,7 @@ import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -62,7 +64,6 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import org.yangdai.kori.presentation.component.VerticalScrollbar
-import org.yangdai.kori.presentation.util.rememberIsScreenWidthExpanded
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -84,6 +85,7 @@ fun Editor(
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     var matchedWordsRanges by remember { mutableStateOf<List<Pair<Int, Int>>>(emptyList()) }
     var currentRangeIndex by remember { mutableIntStateOf(0) }
+    var lastAnimatedScrollTarget by remember { mutableIntStateOf(-1) }
 
     LaunchedEffect(textFieldState.text, findAndReplaceState.searchWord, readOnly) {
         val newRanges = if (readOnly) emptyList()
@@ -117,7 +119,10 @@ fun Editor(
             val targetMatch = matchedWordsRanges[currentRangeIndex]
             val bounds = layoutResult.getBoundingBox(targetMatch.first)
             val scrollPosition = (bounds.top - 50f).toInt().coerceAtLeast(0)
-            scrollState.animateScrollTo(scrollPosition)
+            if (kotlin.math.abs(scrollPosition - lastAnimatedScrollTarget) > 2) {
+                lastAnimatedScrollTarget = scrollPosition
+                scrollState.animateScrollTo(scrollPosition)
+            }
         }
     }
 
@@ -127,7 +132,10 @@ fun Editor(
             textLayoutResult?.let { layout ->
                 val bounds = layout.getBoundingBox(range.first)
                 val scrollPosition = bounds.top.toInt().coerceAtLeast(0)
-                scrollState.animateScrollTo(scrollPosition)
+                if (kotlin.math.abs(scrollPosition - lastAnimatedScrollTarget) > 2) {
+                    lastAnimatedScrollTarget = scrollPosition
+                    scrollState.animateScrollTo(scrollPosition)
+                }
             }
         }
     }
@@ -157,12 +165,10 @@ fun Editor(
     LaunchedEffect(textLayoutResult, scrollState.isScrollInProgress) {
         val layoutResult = textLayoutResult ?: return@LaunchedEffect
         if (!scrollState.isScrollInProgress) {
-            withContext(Dispatchers.Default) {
-                val firstVisibleLine =
-                    layoutResult.getLineForVerticalPosition(scrollState.value.toFloat())
-                val firstVisibleCharPosition = layoutResult.getLineStart(firstVisibleLine)
-                withContext(Dispatchers.Main) { onScroll(firstVisibleCharPosition) }
-            }
+            val firstVisibleLine =
+                layoutResult.getLineForVerticalPosition(scrollState.value.toFloat())
+            val firstVisibleCharPosition = layoutResult.getLineStart(firstVisibleLine)
+            onScroll(firstVisibleCharPosition)
         }
     }
 
@@ -256,6 +262,7 @@ fun Editor(
                     )
                     .fillMaxSize()
                     .dragAndDropText { textFieldState.edit { addInNewLine(it) } }
+                    .overscroll(rememberOverscrollEffect())
                     .then(textFieldModifier),
                 scrollState = scrollState,
                 readOnly = readOnly,
@@ -297,12 +304,10 @@ fun Editor(
                     }
                 }
             )
-            if (!rememberIsScreenWidthExpanded()) {
-                VerticalScrollbar(
-                    modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight(),
-                    state = scrollState
-                )
-            }
+            VerticalScrollbar(
+                modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight(),
+                state = scrollState
+            )
         }
     }
 }

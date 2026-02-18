@@ -3,24 +3,19 @@ package org.yangdai.kori.presentation.component.note.plaintext
 import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.style.TextDecoration
-import org.yangdai.kori.presentation.theme.linkColor
+import org.yangdai.kori.data.local.entity.NoteType
+import org.yangdai.kori.presentation.component.note.highlighting.applyHighlightSpans
+import org.yangdai.kori.presentation.component.note.highlighting.createAsyncHighlighter
+import org.yangdai.kori.presentation.component.note.highlighting.normalized
 
 class PlainTextTransformation : OutputTransformation {
+    private val highlighter = createAsyncHighlighter(NoteType.PLAIN_TEXT)
+
     override fun TextFieldBuffer.transformOutput() {
-        listOf(
-            TextFormat.AUTOLINK_EMAIL_ADDRESS,
-            TextFormat.AUTOLINK_WEB_URL
-        ).forEach { regex ->
-            regex.findAll(this.originalText).forEach { matchResult ->
-                addStyle(
-                    SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline),
-                    matchResult.range.first,
-                    matchResult.range.last + 1
-                )
-            }
-        }
+        if (originalText.isEmpty()) return
+        val spans = highlighter?.highlight(originalText.toString())?.normalized(originalText.length)
+            ?: return
+        applyHighlightSpans(spans)
     }
 }
 

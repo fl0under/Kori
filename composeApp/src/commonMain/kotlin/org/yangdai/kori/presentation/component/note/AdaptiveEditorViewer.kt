@@ -52,6 +52,7 @@ import org.yangdai.kori.presentation.component.note.markdown.MarkdownLint
 import org.yangdai.kori.presentation.component.note.markdown.MarkdownTransformation
 import org.yangdai.kori.presentation.component.note.markdown.MarkdownViewer
 import org.yangdai.kori.presentation.component.note.markdown.markdownKeyEvents
+import org.yangdai.kori.presentation.component.note.highlighting.rememberAsyncOutputTransformation
 import org.yangdai.kori.presentation.component.note.plaintext.PlainTextTransformation
 import org.yangdai.kori.presentation.component.note.todo.TodoLint
 import org.yangdai.kori.presentation.component.note.todo.TodoTransformation
@@ -87,7 +88,7 @@ fun ColumnScope.AdaptiveEditorViewer(
                 editor(
                     Modifier.fillMaxHeight().weight(editorWeight).onPreviewKeyEvent {
                         if (it.type == KeyEventType.KeyDown && it.isCtrlPressed && it.isShiftPressed) {
-                            val currentAnchorIndex = anchorPoints.indexOf(editorWeight)
+                            val currentAnchorIndex = anchorPoints.closestAnchorIndex(editorWeight)
                             when (it.key) {
                                 Key.DirectionLeft -> {
                                     if (currentAnchorIndex > 0) editorWeight =
@@ -193,7 +194,7 @@ fun AdaptiveEditor(
         }
     } else null,
     headerRange = headerRange,
-    outputTransformation = when (noteType) {
+    outputTransformation = rememberAsyncOutputTransformation(noteType, textFieldState) ?: when (noteType) {
         NoteType.MARKDOWN -> MarkdownTransformation()
         NoteType.TODO -> TodoTransformation()
         NoteType.PLAIN_TEXT -> PlainTextTransformation()
@@ -230,3 +231,6 @@ fun AdaptiveViewer(
 
     else -> Spacer(modifier)
 }
+
+private fun List<Float>.closestAnchorIndex(value: Float): Int =
+    indices.minBy { index -> abs(this[index] - value) }
